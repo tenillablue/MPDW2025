@@ -1,0 +1,190 @@
+---
+title: "Tugas Praktikum 2"
+author: "Raiqa Maharani"
+date: "2025-10-26"
+output: html_document
+---
+
+```{r}
+library(TTR)
+library(forecast)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+data_btc <- read.csv("C:/Users/Raiqa/Downloads/MPDW 2025/DATA PRAKTIKUM MPDW PRA UTS (BTC) - Sheet1.csv")
+
+colnames(data_btc)
+head(data_btc)
+str(data_btc)
+```
+
+```{r}
+tanggal_raw <- trimws(as.character(data_btc[,1]))
+tanggal <- as.Date(tanggal_raw, format = "%b %d, %Y")   # Format: "Aug 7, 2024"
+
+tanggal
+```
+
+```{r}
+harga_raw <- gsub(",", "", data_btc[,2])
+harga_raw <- gsub("\\s", "", harga_raw)
+harga <- as.numeric(harga_raw)
+
+harga
+```
+
+```{r}
+summary(data.frame(tanggal, harga))
+
+```
+
+#ts
+```{r}
+btc_ts <- ts(harga)
+btc_ts
+```
+
+```{r}
+n <- length(btc_ts)
+n_train <- round(0.8 * n)
+train_ts <- btc_ts[1:n_train]
+test_ts  <- btc_ts[(n_train + 1):n]
+h_test <- length(test_ts)
+
+n
+n_train
+train_ts
+test_ts
+h_test
+```
+
+#sma
+```{r}
+sma3 <- SMA(train_ts, n = 3)
+fc_sma <- rep(tail(sma3, 1), h_test)
+
+error_sma <- test_ts - fc_sma
+SSE_sma  <- sum(error_sma^2)
+MSE_sma  <- mean(error_sma^2)
+RMSE_sma <- sqrt(MSE_sma)
+MAPE_sma <- mean(abs(error_sma / test_ts)) * 100
+
+sma3
+fc_sma
+error_sma
+SSE_sma
+MSE_sma
+RMSE_sma 
+MAPE_sma 
+```
+
+#dma
+```{r}
+sma <- SMA(train_ts, n = 3)
+dma <- SMA(sma, n = 3)
+fc_dma <- rep(tail(dma, 1), h_test)
+
+error_dma <- test_ts - fc_dma
+SSE_dma  <- sum(error_dma^2)
+MSE_dma  <- mean(error_dma^2)
+RMSE_dma <- sqrt(MSE_dma)
+MAPE_dma <- mean(abs(error_dma / test_ts)) * 100
+
+dma
+fc_dma
+error_dma
+SSE_dma
+MSE_dma
+RMSE_dma  
+MAPE_dma
+
+```
+
+#ses
+```{r}
+fit_ses <- ses(train_ts, h = h_test)
+fc_ses  <- forecast(fit_ses, h = h_test)$mean
+
+error_ses <- test_ts - fc_ses
+SSE_ses  <- sum(error_ses^2)
+MSE_ses  <- mean(error_ses^2)
+RMSE_ses <- sqrt(MSE_ses)
+MAPE_ses <- mean(abs(error_ses / test_ts)) * 100
+
+fit_ses
+fc_ses
+error_ses
+SSE_ses
+MSE_ses 
+RMSE_ses  
+MAPE_ses
+
+
+```
+
+#des
+```{r}
+fit_des <- holt(train_ts, h = h_test)
+fc_des  <- forecast(fit_des, h = h_test)$mean
+
+error_des <- test_ts - fc_des
+SSE_des  <- sum(error_des^2)
+MSE_des  <- mean(error_des^2)
+RMSE_des <- sqrt(MSE_des)
+MAPE_des <- mean(abs(error_des / test_ts)) * 100
+
+fit_des
+fc_des
+error_des
+SSE_des
+MSE_des
+RMSE_des
+MAPE_des
+```
+
+#hw
+```{r}
+fit_hw <- HoltWinters(train_ts, seasonal = "additive")
+fc_hw  <- forecast(fit_hw, h = h_test)$mean
+
+error_hw <- test_ts - fc_hw
+SSE_hw  <- sum(error_hw^2)
+MSE_hw  <- mean(error_hw^2)
+RMSE_hw <- sqrt(MSE_hw)
+MAPE_hw <- mean(abs(error_hw / test_ts)) * 100
+
+fit_hw
+fc_hw
+error_hw
+SSE_hw
+MSE_hw
+RMSE_hw
+MAPE_hw
+
+```
+
+#evaluasimodel
+
+```{r}
+hasil_eval <- data.frame(
+  Model = c("SMA", "DMA", "SES", "DES"),
+  SSE = c(SSE_sma, SSE_dma, SSE_ses, SSE_des),
+  MSE = c(MSE_sma, MSE_dma, MSE_ses, MSE_des),
+  RMSE = c(RMSE_sma, RMSE_dma, RMSE_ses, RMSE_des),
+  MAPE = c(MAPE_sma, MAPE_dma, MAPE_ses, MAPE_des)
+)
+
+print(hasil_eval)
+```
+
+```{r}
+autoplot(btc_ts, series = "Data Aktual") +
+  autolayer(fc_ses, series = "SES") +
+  autolayer(fc_des, series = "DES") +
+  labs(title = "Perbandingan Hasil Peramalan Harga Bitcoin (BTC)",
+       x = "Waktu", y = "Harga BTC (USD)",
+       caption = "Metode: SES, DES") +
+  guides(colour = guide_legend(title = "Model"))
+```
